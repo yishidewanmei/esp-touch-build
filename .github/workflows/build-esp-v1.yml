@@ -1,30 +1,38 @@
-name: Build EspTouch V1 XCFramework
+name: Build ESPTouch V1 XCFramework From Official Source
 on: workflow_dispatch
 jobs:
-  compile_ios_lib:
+  build:
     runs-on: macos-latest
     steps:
-      - name: 安装CocoaPods
-        run: sudo gem install cocoapods
-      - name: 切换国内pod源加速
+      - name: 拉取乐鑫官方 EsptouchForIOS V1 源码
+        run: git clone https://github.com/EspressifApp/EsptouchForIOS.git esp-src
+      - name: 进入源码目录编译真机静态库
+        working-directory: esp-src
         run: |
-          pod repo remove trunk
-          pod repo add trunk https://cdn.cocoapods.org/
-          pod repo update
-      - name: 创建工作目录
-        run: mkdir esp_ios_build
-      - name: pod try拉取V1库
-        working-directory: esp_ios_build
+          xcodebuild archive \
+            -scheme Esptouch \
+            -sdk iphoneos \
+            -archivePath build/iphoneos.xcarchive \
+            SKIP_INSTALL=NO \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+      - name: 编译模拟器静态库
+        working-directory: esp-src
         run: |
-          pod try EspTouch@5.3.2 --no-open
-          cd EspTouch
-          pod install
-      - name: 导出库文件
+          xcodebuild archive \
+            -scheme Esptouch \
+            -sdk iphonesimulator \
+            -archivePath build/iphonesim.xcarchive \
+            SKIP_INSTALL=NO \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+      - name: 合并成XCFramework
+        working-directory: esp-src
         run: |
-          mkdir output
-          cp -r esp_ios_build/EspTouch/Pods/EspTouch/EspTouch.xcframework output/
-      - name: 上传下载包
+          xcodebuild -create-xcframework \
+            -archive build/iphoneos.xcarchive -framework Esptouch.framework \
+            -archive build/iphonesim.xcarchive -framework Esptouch.framework \
+            -output ../output/Esptouch.xcframework
+      - name: 上传产物下载包
         uses: actions/upload-artifact@v4
         with:
-          name: EspTouch-V1-xcframework
+          name: EspTouch-V1-Official-xcframework
           path: output
