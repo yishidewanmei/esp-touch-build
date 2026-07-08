@@ -1,32 +1,28 @@
 name: Build EspTouch V1 XCFramework
-# 仅支持手动点击运行，不会自动触发
 on: workflow_dispatch
 jobs:
   compile_ios_lib:
-    runs-on: macos-latest # Github云端Mac虚拟机，自动带Xcode
+    runs-on: macos-latest
     steps:
-      # 1. 创建临时编译文件夹
       - name: 创建编译目录
         run: mkdir ios_build_temp
-
-      # 2. 生成Podfile锁定EspTouch V1 5.3.2（纯V1配网）
-      - name: 配置CocoaPods
+      - name: 进入目录，创建空Xcode项目 + Podfile
         working-directory: ios_build_temp
         run: |
+          # 生成空临时项目
+          xcodebuild -create-xcproject -project Temp.xcodeproj
+          # 写入Podfile并指定项目
           cat > Podfile << EOF
           platform :ios, '11.0'
+          project 'Temp.xcodeproj'
           target 'TempCompile' do
             pod 'EspTouch', '5.3.2'
           end
           EOF
           pod install --repo-update
-
-      # 3. 拷贝编译完成的xcframework到输出目录
-      - name: 导出库文件
+      - name: 导出xcframework
         run: mkdir output && cp -r ios_build_temp/Pods/EspTouch/EspTouch.xcframework output/
-
-      # 4. 上传产物，编译完成后可下载
-      - name: 打包上传库文件
+      - name: 打包下载产物
         uses: actions/upload-artifact@v4
         with:
           name: EspTouch-V1-xcframework
