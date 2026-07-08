@@ -4,25 +4,22 @@ jobs:
   compile_ios_lib:
     runs-on: macos-latest
     steps:
-      - name: 创建编译目录
-        run: mkdir ios_build_temp
-      - name: 进入目录，创建空Xcode项目 + Podfile
-        working-directory: ios_build_temp
+      - name: 安装CocoaPods
+        run: sudo gem install cocoapods
+      - name: 创建工作目录
+        run: mkdir esp_ios_build && cd esp_ios_build
+      - name: pod try 自动拉取 EspTouch 5.3.2（自带完整Xcode工程）
+        working-directory: esp_ios_build
         run: |
-          # 生成空临时项目
-          xcodebuild -create-xcproject -project Temp.xcodeproj
-          # 写入Podfile并指定项目
-          cat > Podfile << EOF
-          platform :ios, '11.0'
-          project 'Temp.xcodeproj'
-          target 'TempCompile' do
-            pod 'EspTouch', '5.3.2'
-          end
-          EOF
-          pod install --repo-update
-      - name: 导出xcframework
-        run: mkdir output && cp -r ios_build_temp/Pods/EspTouch/EspTouch.xcframework output/
-      - name: 打包下载产物
+          pod try EspTouch@5.3.2 --no-open
+          # 进入自动生成的工程目录
+          cd EspTouch
+          pod install
+      - name: 复制编译好的 XCFramework
+        run: |
+          mkdir output
+          cp -r esp_ios_build/EspTouch/Pods/EspTouch/EspTouch.xcframework output/
+      - name: 打包产物供下载
         uses: actions/upload-artifact@v4
         with:
           name: EspTouch-V1-xcframework
