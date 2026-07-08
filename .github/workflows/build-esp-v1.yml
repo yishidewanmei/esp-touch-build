@@ -1,37 +1,46 @@
-name: Build ESPTouch V1 XCFramework From Official Source
+name: Build ESPTouch V1 XCFramework Official Source
 on: workflow_dispatch
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: 拉取乐鑫官方 EsptouchForIOS V1 源码
+      - name: 克隆官方EsptouchForIOS源码
         run: git clone https://github.com/EspressifApp/EsptouchForIOS.git esp-src
-      - name: 进入源码目录编译真机静态库
+      - name: 进入源码目录，查看所有scheme
+        working-directory: esp-src
+        run: xcodebuild -list -project EspTouchDemo.xcodeproj
+      # 编译真机库
+      - name: Archive iphoneos
         working-directory: esp-src
         run: |
           xcodebuild archive \
-            -scheme Esptouch \
+            -project EspTouchDemo.xcodeproj \
+            -scheme EspTouchDemo \
             -sdk iphoneos \
             -archivePath build/iphoneos.xcarchive \
             SKIP_INSTALL=NO \
             BUILD_LIBRARY_FOR_DISTRIBUTION=YES
-      - name: 编译模拟器静态库
+      # 编译模拟器库
+      - name: Archive iphonesimulator
         working-directory: esp-src
         run: |
           xcodebuild archive \
-            -scheme Esptouch \
+            -project EspTouchDemo.xcodeproj \
+            -scheme EspTouchDemo \
             -sdk iphonesimulator \
             -archivePath build/iphonesim.xcarchive \
             SKIP_INSTALL=NO \
             BUILD_LIBRARY_FOR_DISTRIBUTION=YES
-      - name: 合并成XCFramework
+      # 合并生成xcframework
+      - name: Create XCFramework
         working-directory: esp-src
         run: |
+          mkdir -p ../output
           xcodebuild -create-xcframework \
             -archive build/iphoneos.xcarchive -framework Esptouch.framework \
             -archive build/iphonesim.xcarchive -framework Esptouch.framework \
             -output ../output/Esptouch.xcframework
-      - name: 上传产物下载包
+      - name: 上传编译产物
         uses: actions/upload-artifact@v4
         with:
           name: EspTouch-V1-Official-xcframework
