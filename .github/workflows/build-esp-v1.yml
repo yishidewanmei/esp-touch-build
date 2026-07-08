@@ -6,20 +6,24 @@ jobs:
     steps:
       - name: 安装CocoaPods
         run: sudo gem install cocoapods
+      - name: 切换国内pod源加速
+        run: |
+          pod repo remove trunk
+          pod repo add trunk https://cdn.cocoapods.org/
+          pod repo update
       - name: 创建工作目录
-        run: mkdir esp_ios_build && cd esp_ios_build
-      - name: pod try 自动拉取 EspTouch 5.3.2（自带完整Xcode工程）
+        run: mkdir esp_ios_build
+      - name: pod try拉取V1库
         working-directory: esp_ios_build
         run: |
           pod try EspTouch@5.3.2 --no-open
-          # 进入自动生成的工程目录
           cd EspTouch
           pod install
-      - name: 复制编译好的 XCFramework
+      - name: 导出库文件
         run: |
           mkdir output
           cp -r esp_ios_build/EspTouch/Pods/EspTouch/EspTouch.xcframework output/
-      - name: 打包产物供下载
+      - name: 上传下载包
         uses: actions/upload-artifact@v4
         with:
           name: EspTouch-V1-xcframework
