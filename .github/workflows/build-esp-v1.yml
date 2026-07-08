@@ -7,41 +7,50 @@ jobs:
       - name: 克隆官方EsptouchForIOS源码
         run: git clone https://github.com/EspressifApp/EsptouchForIOS.git esp-src
 
-      - name: 编译底层库 Target：Esptouch（真机）
+      - name: 清理旧构建产物
+        working-directory: esp-src
+        run: rm -rf build output_ios output_sim
+      
+      # 编译真机 framework
+      - name: Build iphoneos framework
         working-directory: esp-src
         run: |
-          xcodebuild archive \
+          xcodebuild build \
             -project EspTouchDemo.xcodeproj \
             -target Esptouch \
             -sdk iphoneos \
-            -archivePath build/iphoneos.xcarchive \
+            -configuration Release \
             IPHONEOS_DEPLOYMENT_TARGET=12.0 \
-            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
-            SKIP_INSTALL=YES
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+          mkdir -p output_ios
+          cp -r build/Release-iphoneos/Esptouch.framework output_ios/
 
-      - name: 编译底层库 Target：Esptouch（模拟器）
+      # 编译模拟器 framework
+      - name: Build iphonesimulator framework
         working-directory: esp-src
         run: |
-          xcodebuild archive \
+          xcodebuild build \
             -project EspTouchDemo.xcodeproj \
             -target Esptouch \
             -sdk iphonesimulator \
-            -archivePath build/iphonesim.xcarchive \
+            -configuration Release \
             IPHONEOS_DEPLOYMENT_TARGET=12.0 \
-            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
-            SKIP_INSTALL=YES
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES
+          mkdir -p output_sim
+          cp -r build/Release-iphonesimulator/Esptouch.framework output_sim/
 
-      - name: 合并生成标准XCFramework
+      # 合并成 XCFramework
+      - name: Merge to XCFramework
         working-directory: esp-src
         run: |
           mkdir -p ../output
           xcodebuild -create-xcframework \
-            -archive build/iphoneos.xcarchive -framework Esptouch.framework \
-            -archive build/iphonesim.xcarchive -framework Esptouch.framework \
+            -framework output_ios/Esptouch.framework \
+            -framework output_sim/Esptouch.framework \
             -output ../output/Esptouch.xcframework
 
-      - name: 上传编译产物
+      - name: 上传编译好的库
         uses: actions/upload-artifact@v4
         with:
-          name: EspTouch-V1-Official-xcframework
+          name: EspTouch-V1-xcframework-final
           path: output
